@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: dev
+spec:
+  ports:
+  - port: 8888
+    targetPort: prometheus
+    name: prometheus
+  selector:
+    app: otel-collector
