@@ -1,0 +1,108 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reporting-jaegertracing
+  namespace: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reporting-jaegertracing
+  template:
+    metadata:
+      labels:
+        app: reporting-jaegertracing
+    spec:
+      containers:
+      - name: jaegertracing
+        image: jaegertracing/all-in-one:1.59.0
+        ports:
+        - containerPort: 5775
+          name: udp-binary
+          protocol: UDP
+        - containerPort: 5778
+          name: admin
+        - containerPort: 14250
+          name: grpc
+        - containerPort: 14268
+          name: http
+        - containerPort: 14269
+          name: metrics
+        - containerPort: 16686
+          name: query
+        - containerPort: 6831
+          name: udp-6831
+          protocol: UDP
+        - containerPort: 6832
+          name: udp-6832
+          protocol: UDP
+        - containerPort: 4317
+          name: otlp-grpc
+        - containerPort: 4318
+          name: otlp-http
+        - containerPort: 9411
+          name: zipkin
+        env:
+        - name: SPAN_STORAGE_TYPE
+          value: elasticsearch
+        - name: ES_SERVER_URLS
+          value: http://elasticsearch:9200
+        - name: METRICS_STORAGE_TYPE
+          value: prometheus
+        - name: PROMETHEUS_SERVER_URL
+          value: http://jaeger-prometheus.dev.svc.cluster.local:9090
+        - name: PROMETHEUS_QUERY_SUPPORT_SPANMETRICS_CONNECTOR
+          value: "true"
+        resources:
+          requests:
+            memory: "256M"
+            cpu: "500m"
+          limits:
+            memory: "512Mi"
+            cpu: "1"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reporting-jaegertracing
+  namespace: dev
+spec:
+  ports:
+  - port: 5775
+    targetPort: udp-binary
+    protocol: UDP
+    name: udp-binary
+  - port: 5778
+    targetPort: admin
+    name: admin
+  - port: 14250
+    targetPort: grpc
+    name: grpc
+  - port: 14268
+    targetPort: http
+    name: http
+  - port: 14269
+    targetPort: metrics
+    name: metrics
+  - port: 16686
+    targetPort: query
+    name: query
+  - port: 6831
+    targetPort: udp-6831
+    protocol: UDP
+    name: udp-6831
+  - port: 6832
+    targetPort: udp-6832
+    protocol: UDP
+    name: udp-6832
+  - port: 4317
+    targetPort: otlp-grpc
+    name: otlp-grpc
+  - port: 4318
+    targetPort: otlp-http
+    name: otlp-http
+  - port: 9411
+    targetPort: zipkin
+    name: zipkin
+  selector:
+    app: reporting-jaegertracing

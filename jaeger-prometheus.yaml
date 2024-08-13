@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger-prometheus
+  namespace: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jaeger-prometheus
+  template:
+    metadata:
+      labels:
+        app: jaeger-prometheus
+    spec:
+      initContainers:
+      - name: init-chown
+        image: busybox
+        command: ['sh', '-c', 'chown -R 65534:65534 /prometheus']
+        volumeMounts:
+        - name: prometheus-storage-volume
+          mountPath: /prometheus
+      containers:
+      - name: prometheus
+        image: prom/prometheus:latest
+        args:
+          - "--config.file=/etc/prometheus/prometheus.yml"
+          - "--storage.tsdb.path=/prometheus"
+        ports:
+        - containerPort: 9090
+        securityContext:
+          runAsUser: 65534  # non-root user (nobody)
+          runAsGroup: 65534  # non-root group (nobody)
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1"
+        volumeMounts:
+        - name: prometheus-config-volume
+          mountPath: /etc/prometheus/
+        - name: prometheus-storage-volume
+          mountPath: /prometheus
+      volumes:
+      - name: prometheus-config-volume
+        configMap:
+          name: jaeger-prometheus-config
+      - name: prometheus-storage-volume
+        persistentVolumeClaim:
+          claimName: jaeger-prometheus-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger-prometheus
+  namespace: dev
+spec:
+  ports:
+  - port: 9090
+    targetPort: 9090
+    protocol: TCP
+  selector:
+    app: jaeger-prometheus
